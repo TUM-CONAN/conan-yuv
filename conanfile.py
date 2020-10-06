@@ -52,7 +52,7 @@ class LibnameConan(ConanFile):
     _build_subfolder = "build_subfolder"
 
     requires = (
-        "libjpeg/9c",
+        "libjpeg-turbo/2.0.5",
     )
 
     # temporary until release fixes interconnect issues on windows/release builds
