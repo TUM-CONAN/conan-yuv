@@ -31,7 +31,7 @@ class LibnameConan(ConanFile):
     homepage = "https://github.com/ulricheck/libyuv"
     author = "ulrich eck"
     license = "MIT"  # Indicates license type of the packaged library; please use SPDX Identifiers https://spdx.org/licenses/
-    exports = ["LICENSE.md"]
+    exports = ["CMakeLists.txt", "LICENSE.md"]
     # exports_sources = ["CMakeLists.txt", "patches/*"]
     generators = "cmake"
     short_paths = True  # Some folders go out of the 260 chars path length scope (windows)
@@ -68,9 +68,9 @@ class LibnameConan(ConanFile):
         if self.settings.os == 'Windows':
             del self.options.fPIC
 
-    # def configure(self):
-    #     if self.settings.compiler == 'Visual Studio' and int(self.settings.compiler.version.value) < 14:
-    #         raise ConanException("{} requires Visual Studio version 14 or greater".format(self.name))
+    def configure(self):
+        if self.options.shared:
+            self.options["libjpeg-turbo"].shared = True
 
     def _configure_cmake(self):
 
@@ -85,11 +85,20 @@ class LibnameConan(ConanFile):
         for option, value in self.options.items():
             add_cmake_option(option, value)
 
-        cmake.configure(source_folder=self._source_subfolder, build_folder=self._build_subfolder)
+        cmake.configure(build_folder=self._build_subfolder)
 
         return cmake
 
     def build(self):
+        tools.replace_in_file(os.path.join(self._source_subfolder, "CMakeLists.txt"),
+            """  target_link_libraries( yuvconvert ${JPEG_LIBRARY} )""",
+            """  target_link_libraries( ${ly_lib_shared} ${JPEG_LIBRARY} )
+  target_link_libraries( yuvconvert ${JPEG_LIBRARY} )"""
+            )
+        tools.replace_in_file(os.path.join(self._source_subfolder, "CMakeLists.txt"),
+            """INSTALL ( PROGRAMS ${CMAKE_BINARY_DIR}/yuvconvert\t\t\tDESTINATION bin )""",
+            """# INSTALL ( PROGRAMS ${CMAKE_BINARY_DIR}/yuvconvert\t\t\tDESTINATION bin )""",
+            )
         cmake = self._configure_cmake()
         cmake.build()
 
