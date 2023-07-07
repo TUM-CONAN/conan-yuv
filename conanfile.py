@@ -88,16 +88,18 @@ class LibnameConan(ConanFile):
     def layout(self):
         cmake_layout(self, src_folder="source_folder")
 
-    def build(self):
-  #       tools.replace_in_file(os.path.join(self._source_subfolder, "CMakeLists.txt"),
-  #           """  target_link_libraries( yuvconvert ${JPEG_LIBRARY} )""",
-  #           """  target_link_libraries( ${ly_lib_shared} ${JPEG_LIBRARY} )
-  # target_link_libraries( yuvconvert ${JPEG_LIBRARY} )"""
-  #           )
-  #       tools.replace_in_file(os.path.join(self._source_subfolder, "CMakeLists.txt"),
-  #           """INSTALL ( PROGRAMS ${CMAKE_BINARY_DIR}/yuvconvert\t\t\tDESTINATION bin )""",
-  #           """# INSTALL ( PROGRAMS ${CMAKE_BINARY_DIR}/yuvconvert\t\t\tDESTINATION bin )""",
-  #           )
+    def build(self):        
+        if self.settings.os == 'Windows':
+            replace_in_file(self, os.path.join(self.source_folder, "CMakeLists.txt"),
+                """  target_link_libraries( yuvconvert ${JPEG_LIBRARY} )""",
+                """  target_link_libraries(${ly_lib_shared} ${JPEG_INCLUDE_DIR}/../lib/jpeg.lib)
+  target_link_libraries( yuvconvert ${JPEG_LIBRARY} )"""
+                )
+            replace_in_file(self, os.path.join(self.source_folder, "CMakeLists.txt"),
+                """INSTALL ( PROGRAMS ${CMAKE_BINARY_DIR}/yuvconvert\t\t\tDESTINATION bin )""",
+                """# INSTALL ( PROGRAMS ${CMAKE_BINARY_DIR}/yuvconvert\t\t\tDESTINATION bin )""",
+                )
+                
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
