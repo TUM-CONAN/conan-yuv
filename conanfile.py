@@ -4,8 +4,8 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout, CMakeDeps
 from conan.tools.scm import Git
-from conan.tools.files import load, update_conandata, copy, replace_in_file, collect_libs, get
-from conans.errors import ConanInvalidConfiguration
+from conan.tools.files import load, update_conandata, copy, replace_in_file, collect_libs, get, rm
+from conan.errors import ConanInvalidConfiguration
 import os
 
 
@@ -107,6 +107,25 @@ class LibnameConan(ConanFile):
     def package(self):
         cmake = CMake(self)
         cmake.install()
+
+        # Upstream CMakeLists always builds AND installs both the static (libyuv.a)
+        # and shared (libyuv.so) libraries. Shipping both in a single package is
+        # ambiguous: on Linux CMakeDeps' find_library() resolves "yuv" to the .so
+        # first (default suffix order .so;.a), so a STATIC consumer ends up with a
+        # STATIC imported target whose IMPORTED_LOCATION points at libyuv.so. When
+        # the linker is put into -Bstatic mode this fails with
+        # "attempted static link of dynamic object libyuv.so".
+        # Keep only the library that matches the `shared` option. On Windows the
+        # static lib and the DLL import lib share the .lib extension, so they can't
+        # be told apart here; only clean up on Unix where .a vs .so/.dylib is
+        # unambiguous.
+        if self.settings.os != "Windows":
+            libdir = os.path.join(self.package_folder, "lib")
+            if self.options.shared:
+                rm(self, "*.a", libdir)
+            else:
+                rm(self, "*.so*", libdir)
+                rm(self, "*.dylib", libdir)
 
     def package_info(self):
         self.cpp_info.libs = collect_libs(self)
